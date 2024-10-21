@@ -35,7 +35,6 @@ public class Main {
                 int totalLines = 0;
                 int maxLength = Integer.MIN_VALUE;
                 int minLength = Integer.MAX_VALUE;
-
                 String line;
                 while ((line = reader.readLine()) != null) {
                     totalLines++;
