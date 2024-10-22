@@ -14,7 +14,7 @@ target/
 .idea/
 out/
 *iml
-*.xml
+
 
 ### Eclipse ###
 .apt_generated
