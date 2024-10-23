@@ -45,8 +45,7 @@ public class Statistics {
         // Получаем размер данных
         int dataSize = entry.getDataSize();
 
-        // Логируем размер данных
-        System.out.println("Adding data size: " + dataSize);
+
 
         // Добавляем объем данных к общему трафику
         totalTraffic += dataSize;
