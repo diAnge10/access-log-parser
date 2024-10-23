@@ -1,17 +1,17 @@
 package AccessLogParser;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
-import java.text.DecimalFormat;
+
 import java.io.File;
 import java.util.Scanner;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 
 public class Main {
     public static void main(String[] args) {
-        DecimalFormat df = new DecimalFormat("#.##");
         Scanner scanner = new Scanner(System.in);
         int counter = 0; // Счётчик корректных файлов
-
+        int googlebotCounter = 0;
+        int yandexBotCounter = 0;
         while (true) {
             try {
                 System.out.println("Введите путь к файлу или введите 'exit', чтобы выйти");
@@ -34,45 +34,44 @@ public class Main {
 
                 counter++;
 
-
                 LineIterator it = FileUtils.lineIterator(file, "UTF-8");
-                int googlebotCounter = 0;
-                int yandexBotCounter = 0;
+                Statistics statistics = new Statistics();
                 int lineCounter = 0;
-                while (it.hasNext()) {
 
+                while (it.hasNext()) {
                     String line = it.nextLine();
                     if (line.length() > 1024) {
                         throw new LongException("Длина строки превышает 1024 символа");
                     }
-                    String[] parts = line.split(" "); // разделение строки по пробелам
-                    String[] parts1 = line.split("\""); // разделение строки по кавычкам
-
+                    String[] parts = line.split(" ");
                     String ipAddress = parts[0];
-                    if (ipAddress.length()>0) {
-                        lineCounter = lineCounter +1;
+                    if (ipAddress.length() > 0) {
+                        lineCounter++;
                     }
-
-                    String dateTime = parts[3] + " " + parts[4].replace("[", "");
+                    String dateTime = parts[3].substring(1).replace("[", "") + " " + parts[4].replace("]", "");
                     String requestMethod = parts[5].replace("\"", "");
                     String requestPath = parts[6];
                     int responseCode = Integer.parseInt(parts[8]);
                     int dataSize = parts[9].equals("-") ? 0 : Integer.parseInt(parts[9]);
                     String referer = parts.length > 10 ? parts[10].replace("\"", "") : "";
-                    // Индекс начала User-Agent (последняя двойная кавычка перед User-Agent)
+
+                    // Извлечение User-Agent
                     int secondLastQuoteIndex = line.substring(0, line.lastIndexOf("\"")).lastIndexOf("\"");
-                    // Извлечение User-Agent начиная с символа следующего после предпоследней двойной кавычки
                     String userAgent = line.substring(secondLastQuoteIndex);
 
+                    // Создание объекта LogEntry
+                    LogEntry logEntry = new LogEntry(ipAddress, dateTime, requestMethod, requestPath,
+                            responseCode, dataSize, referer, userAgent);
+                    statistics.addEntry(logEntry);
                     // Вывод данных
-                    System.out.println("IP-адрес: " + ipAddress);
-                    System.out.println("Дата и время запроса: " + dateTime);
-                    System.out.println("Метод запроса: " + requestMethod);
-                    System.out.println("Путь запроса: " + requestPath);
-                    System.out.println("Код ответа: " + responseCode);
-                    System.out.println("Размер данных: " + dataSize);
-                    System.out.println("Referer: " + referer);
-                    System.out.println("User-Agent: " + userAgent);
+                    System.out.println("IP-адрес: " + logEntry.getIpAddress());
+                    System.out.println("Дата и время запроса: " + logEntry.getDateTime());
+                    System.out.println("Метод запроса: " + logEntry.getRequestMethod());
+                    System.out.println("Путь запроса: " + logEntry.getRequestPath());
+                    System.out.println("Код ответа: " + logEntry.getResponseCode());
+                    System.out.println("Размер данных: " + logEntry.getDataSize());
+                    System.out.println("Referer: " + logEntry.getReferer());
+                    System.out.println("User-Agent: " + logEntry.getUserAgent());
                     int startIndex = userAgent.indexOf("(");
                     int endIndex = userAgent.indexOf(")", startIndex);
 
@@ -80,7 +79,7 @@ public class Main {
                         String inParentheses = userAgent.substring(startIndex + 1, endIndex);
                         //System.out.println("Часть в скобках из User-Agent: " + inParentheses);
                         String[] parts2 = inParentheses.split(";"); // разделение строки по ;
-                        String prebot = parts2.length > 2 ? parts2[1].replace(" ", ""): "";
+                        String prebot = parts2.length > 2 ? parts2[1].replace(" ", "") : "";
                         String[] parts3 = prebot.split("/");
                         /*System.out.println("ПреБот :" + prebot);
                         String bot = parts3.length > 2 ? parts3[1].trim();
@@ -89,7 +88,7 @@ public class Main {
                             String bot = parts3[0].trim();
                             //System.out.println("ПреБот: " + prebot);
                             System.out.println("Бот: " + bot);
-                            if(bot.equals("Googlebot")) {
+                            if (bot.equals("Googlebot")) {
                                 googlebotCounter++;
                             } else {
                                 yandexBotCounter++;
@@ -98,18 +97,39 @@ public class Main {
                     }
 
                     System.out.println("--------------------------------------------------");
-                }
-                System.out.println("Общее число строк: " + lineCounter);
-                System.out.println("Кол-во запросов из Яндекса: " + yandexBotCounter);
-                System.out.println("Кол-во запросов из Google: " + googlebotCounter);
-                System.out.println("Доля запросов от Google: " + df.format(((double)googlebotCounter / lineCounter) * 100) + "%");
-                System.out.println("Доля запросов от Яндекса: " + df.format(((double)yandexBotCounter / lineCounter) * 100) + "%");
-                System.out.println("Файл обработан успешно");
-                System.out.println("Путь указан верно. Это файл номер " + counter);
 
-            } catch (Exception ex) {
-                ex.printStackTrace();
+
+                    // Обработка логики для статистики
+                    String bot = extractBot(userAgent);
+                    if (bot.equals("Googlebot")) {
+                        statistics.incrementGooglebotCount();
+                    } else if (bot.equals("YandexBot")) {
+                        statistics.incrementYandexBotCount();
+                    }
+
+                    // Дополнительная обработка logEntry при необходимости
+                }
+
+                System.out.println("Количество запросов от Googlebot: " + statistics.getGooglebotCount());
+                System.out.println("Количество запросов от YandexBot: " + statistics.getYandexBotCount());
+                System.out.println("Общее количество обработанных строк: " + lineCounter);
+                System.out.println("Объём часового траффика: " +statistics.getTrafficRate());
+
+            } catch (Exception e) {
+                System.err.println("Ошибка: " + e.getMessage());
             }
         }
+
+        scanner.close();
     }
+        private static String extractBot(String userAgent) {
+            if (userAgent.contains("Googlebot")) {
+                return "Googlebot";
+            } else if (userAgent.contains("YandexBot")) {
+                return "YandexBot";
+            }
+            return "Unknown";
+        }
 }
+
+
