@@ -117,6 +117,9 @@ public class Main {
                 //System.out.println("Список всех существующих страниц сайта: " + statistics.getExistingPages());
                 System.out.println("Частота встречаемости каждой операционной системы: " +statistics.getOSShare());
                 System.out.println("Частота встречаемости каждого браузера: " +statistics.getBrowserShare());
+                System.out.println("Среднее посещение за час: "+statistics.getAverageVisitsPerHour());
+                System.out.println("Среднее кол-во ошибочных запросов за час: "+statistics.getAverageErrorRequestsPerHour());
+                System.out.println("Средняя посещаемость одним пользователем: "+statistics.getAverageVisitsPerUser());
 
             } catch (Exception e) {
                 System.err.println("Ошибка: " + e.getMessage());

@@ -16,8 +16,10 @@ public class Statistics {
     private HashSet<String> nonExistingPages; // Несуществующие страницы
     private HashMap<String, Integer> osStatistics; // Частота встречаемости каждой операционной системы
     private HashMap<String, Integer> browserStatistics; // Частота встречаемости браузеров
+    private int totalVisits = 0;
+    private int errorRequests = 0; // Для подсчета ошибочных запросов
+    private Set<String> uniqueUserIPs; // Уникальные IP-адреса пользователей
 
-    // Конструктор без параметров
     public Statistics() {
         this.googlebotCount = 0;
         this.yandexBotCount = 0;
@@ -25,9 +27,10 @@ public class Statistics {
         this.minTime = null;
         this.maxTime = null;
         this.existingPages = new HashSet<>();
-        this.nonExistingPages = new HashSet<>(); // Инициализация набора несуществующих страниц
+        this.nonExistingPages = new HashSet<>();
         this.osStatistics = new HashMap<>();
-        this.browserStatistics = new HashMap<>(); // Инициализация статистики браузеров
+        this.browserStatistics = new HashMap<>();
+        this.uniqueUserIPs = new HashSet<>(); // Инициализация набора уникальных IP-адресов
     }
 
     public void incrementGooglebotCount() {
@@ -55,7 +58,6 @@ public class Statistics {
 
         // Получаем размер данных
         int dataSize = entry.getDataSize();
-
         // Добавляем объем данных к общему трафику
         totalTraffic += dataSize;
 
@@ -70,15 +72,17 @@ public class Statistics {
             maxTime = entryTime;
         }
 
+        // Учитываем существующие и несуществующие страницы
         if (entry.getResponseCode() == 200) {
             existingPages.add(entry.getRequestPath());
         } else if (entry.getResponseCode() == 404) {
-            nonExistingPages.add(entry.getRequestPath()); // Добавляем адрес несуществующей страницы
+            nonExistingPages.add(entry.getRequestPath());
         }
 
         // Учитываем операционную систему
         String userAgentString = entry.getUserAgent(); // Получаем строку User-Agent
         UserAgent userAgent = new UserAgent(userAgentString); // Создаем объект UserAgent
+
         String os = userAgent.getOsType();
         String browser = userAgent.getBrowser(); // Получаем тип браузера
 
@@ -87,11 +91,24 @@ public class Statistics {
 
         // Обновляем статистику браузеров
         browserStatistics.put(browser, browserStatistics.getOrDefault(browser, 0) + 1);
+
+        // Учитываем посещения только от реальных пользователей
+        String ipAddress = entry.getIpAddress(); // Получаем IP-адрес
+        if (!userAgent.isBot(userAgentString)) {
+            totalVisits++;
+            uniqueUserIPs.add(ipAddress); // Добавляем IP-адрес в уникальные IP
+        }
+
+        // Учитываем ошибочные запросы
+        if (entry.getResponseCode() >= 400) {
+            errorRequests++;
+        }
     }
 
     public Set<String> getExistingPages() {
         return new HashSet<>(existingPages); // Возвращаем копию существующих страниц
     }
+
     public Set<String> getNonExistingPages() {
         return new HashSet<>(nonExistingPages); // Возвращаем копию несуществующих страниц
     }
@@ -100,10 +117,31 @@ public class Statistics {
         if (minTime != null && maxTime != null) {
             long hoursDifference = java.time.Duration.between(minTime, maxTime).toHours();
             if (hoursDifference > 0) {
-                return (double) (totalTraffic / hoursDifference) * -1;
+                return (double) (totalTraffic / hoursDifference) * (-1);
             }
         }
         return 0; // Возвращаем 0, если нет данных
+    }
+
+    public double getAverageVisitsPerHour() {
+        if (minTime != null && maxTime != null) {
+            long hoursDifference = java.time.Duration.between(minTime, maxTime).toHours();
+            return (hoursDifference > 0) ? (double) totalVisits / hoursDifference : 0.0;
+        }
+        return 0.0;
+    }
+
+    public double getAverageErrorRequestsPerHour() {
+        if (minTime != null && maxTime != null) {
+            long hoursDifference = java.time.Duration.between(minTime, maxTime).toHours();
+            return (hoursDifference > 0) ? (double) errorRequests / hoursDifference : 0.0;
+        }
+        return 0.0;
+    }
+
+    public double getAverageVisitsPerUser () {
+        long realUsersCount = uniqueUserIPs.size();
+        return (realUsersCount > 0) ? (double) totalVisits / realUsersCount : 0.0;
     }
 
     public Map<String, Double> getOSShare() {
@@ -116,7 +154,6 @@ public class Statistics {
             double share = (totalOSCount > 0) ? (double) count / totalOSCount : 0.0;
             osShare.put(osName, share);
         }
-
         return osShare; // Возвращаем долю для каждой операционной системы
     }
 
@@ -130,7 +167,6 @@ public class Statistics {
             double share = (totalBrowserCount > 0) ? (double) count / totalBrowserCount : 0.0;
             browserShare.put(browserName, share);
         }
-
         return browserShare; // Возвращаем долю для каждого браузера
     }
 }

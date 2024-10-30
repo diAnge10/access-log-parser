@@ -33,6 +33,10 @@ public class UserAgent {
         return "Other";
     }
 
+    public boolean isBot(String userAgent) {
+        return userAgent.toLowerCase().contains("bot");
+    }
+
     // Геттеры
     public String getOsType() {
         return osType;
