@@ -120,6 +120,9 @@ public class Main {
                 System.out.println("Среднее посещение за час: "+statistics.getAverageVisitsPerHour());
                 System.out.println("Среднее кол-во ошибочных запросов за час: "+statistics.getAverageErrorRequestsPerHour());
                 System.out.println("Средняя посещаемость одним пользователем: "+statistics.getAverageVisitsPerUser());
+                System.out.println("Пиковая посещаемость в секунду: "+statistics.getPeakVisitsPerSecond());
+                System.out.println("Cписок сайтов, со страниц которых есть ссылки на текущий сайт: "+statistics.getReferers());
+                System.out.println("Максимальная посещаемость одним пользователем: "+statistics.getMaxVisitsPerUser());
 
             } catch (Exception e) {
                 System.err.println("Ошибка: " + e.getMessage());

@@ -1,5 +1,7 @@
 package AccessLogParser;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,6 +21,9 @@ public class Statistics {
     private int totalVisits = 0;
     private int errorRequests = 0; // Для подсчета ошибочных запросов
     private Set<String> uniqueUserIPs; // Уникальные IP-адреса пользователей
+    private Map<Integer, Integer> visitsPerSecond = new HashMap<>();
+    private Set<String> referers = new HashSet<>();
+    private Map<String, Integer> userVisits = new HashMap<>();
 
     public Statistics() {
         this.googlebotCount = 0;
@@ -103,6 +108,22 @@ public class Statistics {
         if (entry.getResponseCode() >= 400) {
             errorRequests++;
         }
+
+        int second = entry.getDateTime().getSecond();
+        visitsPerSecond.put(second, visitsPerSecond.getOrDefault(second, 0) + 1);
+
+
+        String referer = entry.getReferer();
+        if (referer != null && !referer.isEmpty()) {
+            String domain = getDomain(referer); // Используем метод getDomain для извлечения домена
+            referers.add(domain);
+        }
+
+
+
+        if (!userAgent.isBot(entry.getUserAgent())) {
+            userVisits.put(ipAddress, userVisits.getOrDefault(ipAddress, 0) + 1);
+        }
     }
 
     public Set<String> getExistingPages() {
@@ -139,6 +160,7 @@ public class Statistics {
         return 0.0;
     }
 
+
     public double getAverageVisitsPerUser () {
         long realUsersCount = uniqueUserIPs.size();
         return (realUsersCount > 0) ? (double) totalVisits / realUsersCount : 0.0;
@@ -168,5 +190,23 @@ public class Statistics {
             browserShare.put(browserName, share);
         }
         return browserShare; // Возвращаем долю для каждого браузера
+    }
+    private String getDomain(String url) {
+        try {
+            URI uri = new URI(url);
+            String domain = uri.getHost();
+            return domain != null ? domain : "";
+        } catch (URISyntaxException e) {
+            return "";
+        }
+    }
+    public int getPeakVisitsPerSecond() {
+        return visitsPerSecond.values().stream().max(Integer::compare).orElse(0);
+    }
+    public Set<String> getReferers() {
+        return referers;
+    }
+    public int getMaxVisitsPerUser() {
+        return userVisits.values().stream().max(Integer::compare).orElse(0);
     }
 }
