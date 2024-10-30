@@ -1,7 +1,10 @@
 package AccessLogParser;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class Statistics {
     private int googlebotCount;
@@ -9,6 +12,8 @@ public class Statistics {
     private int totalTraffic; // Общее количество трафика
     private LocalDateTime minTime; // Минимальное время
     private LocalDateTime maxTime; // Максимальное время
+    private Set<String> existingPages; // Существующие страницы
+    private HashMap<String, Integer> osStatistics; // Частота встречаемости каждой операционной системы
 
     // Конструктор без параметров
     public Statistics() {
@@ -17,6 +22,8 @@ public class Statistics {
         this.totalTraffic = 0;
         this.minTime = null;
         this.maxTime = null;
+        this.existingPages = new HashSet<>();
+        this.osStatistics = new HashMap<>();
     }
 
     public void incrementGooglebotCount() {
@@ -45,8 +52,6 @@ public class Statistics {
         // Получаем размер данных
         int dataSize = entry.getDataSize();
 
-
-
         // Добавляем объем данных к общему трафику
         totalTraffic += dataSize;
 
@@ -60,16 +65,43 @@ public class Statistics {
         if (maxTime == null || entryTime.isAfter(maxTime)) {
             maxTime = entryTime;
         }
+
+        if (entry.getResponseCode() == 200) {
+            existingPages.add(entry.getRequestPath());
+        }
+
+        // Учитываем операционную систему
+        String userAgentString = entry.getUserAgent(); // Получаем строку User-Agent
+        UserAgent userAgent = new UserAgent(userAgentString); // Создаем объект UserAgent
+        String os = userAgent.getOsType();
+        osStatistics.put(os, osStatistics.getOrDefault(os, 0) + 1);
     }
 
+    public Set<String> getExistingPages() {
+        return new HashSet<>(existingPages); // Возвращаем копию существующих страниц
+    }
 
     public double getTrafficRate() {
         if (minTime != null && maxTime != null) {
             long hoursDifference = java.time.Duration.between(minTime, maxTime).toHours();
             if (hoursDifference > 0) {
-                return (double) (totalTraffic / hoursDifference)*-1;
+                return (double) (totalTraffic / hoursDifference) * -1;
             }
         }
         return 0; // Возвращаем 0, если нет данных
+    }
+
+    public Map<String, Double> getOSShare() {
+        Map<String, Double> osShare = new HashMap<>();
+        int totalOSCount = osStatistics.values().stream().mapToInt(Integer::intValue).sum();
+
+        for (Map.Entry<String, Integer> entry : osStatistics.entrySet()) {
+            String osName = entry.getKey();
+            int count = entry.getValue();
+            double share = (totalOSCount > 0) ? (double) count / totalOSCount : 0.0;
+            osShare.put(osName, share);
+        }
+
+        return osShare; // Возвращаем долю для каждой операционной системы
     }
 }

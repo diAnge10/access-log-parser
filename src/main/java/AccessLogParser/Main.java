@@ -114,6 +114,8 @@ public class Main {
                 System.out.println("Количество запросов от YandexBot: " + statistics.getYandexBotCount());
                 System.out.println("Общее количество обработанных строк: " + lineCounter);
                 System.out.println("Объём часового траффика: " +statistics.getTrafficRate());
+                //System.out.println("Список всех существующих страниц сайта: " + statistics.getExistingPages());
+                System.out.println("Частота встречаемости каждой операционной системы: " +statistics.getOSShare());
 
             } catch (Exception e) {
                 System.err.println("Ошибка: " + e.getMessage());
