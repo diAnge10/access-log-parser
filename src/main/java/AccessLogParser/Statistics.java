@@ -13,7 +13,9 @@ public class Statistics {
     private LocalDateTime minTime; // Минимальное время
     private LocalDateTime maxTime; // Максимальное время
     private Set<String> existingPages; // Существующие страницы
+    private HashSet<String> nonExistingPages; // Несуществующие страницы
     private HashMap<String, Integer> osStatistics; // Частота встречаемости каждой операционной системы
+    private HashMap<String, Integer> browserStatistics; // Частота встречаемости браузеров
 
     // Конструктор без параметров
     public Statistics() {
@@ -23,7 +25,9 @@ public class Statistics {
         this.minTime = null;
         this.maxTime = null;
         this.existingPages = new HashSet<>();
+        this.nonExistingPages = new HashSet<>(); // Инициализация набора несуществующих страниц
         this.osStatistics = new HashMap<>();
+        this.browserStatistics = new HashMap<>(); // Инициализация статистики браузеров
     }
 
     public void incrementGooglebotCount() {
@@ -68,17 +72,28 @@ public class Statistics {
 
         if (entry.getResponseCode() == 200) {
             existingPages.add(entry.getRequestPath());
+        } else if (entry.getResponseCode() == 404) {
+            nonExistingPages.add(entry.getRequestPath()); // Добавляем адрес несуществующей страницы
         }
 
         // Учитываем операционную систему
         String userAgentString = entry.getUserAgent(); // Получаем строку User-Agent
         UserAgent userAgent = new UserAgent(userAgentString); // Создаем объект UserAgent
         String os = userAgent.getOsType();
+        String browser = userAgent.getBrowser(); // Получаем тип браузера
+
+        // Обновляем статистику операционных систем
         osStatistics.put(os, osStatistics.getOrDefault(os, 0) + 1);
+
+        // Обновляем статистику браузеров
+        browserStatistics.put(browser, browserStatistics.getOrDefault(browser, 0) + 1);
     }
 
     public Set<String> getExistingPages() {
         return new HashSet<>(existingPages); // Возвращаем копию существующих страниц
+    }
+    public Set<String> getNonExistingPages() {
+        return new HashSet<>(nonExistingPages); // Возвращаем копию несуществующих страниц
     }
 
     public double getTrafficRate() {
@@ -103,5 +118,19 @@ public class Statistics {
         }
 
         return osShare; // Возвращаем долю для каждой операционной системы
+    }
+
+    public Map<String, Double> getBrowserShare() {
+        Map<String, Double> browserShare = new HashMap<>();
+        int totalBrowserCount = browserStatistics.values().stream().mapToInt(Integer::intValue).sum();
+
+        for (Map.Entry<String, Integer> entry : browserStatistics.entrySet()) {
+            String browserName = entry.getKey();
+            int count = entry.getValue();
+            double share = (totalBrowserCount > 0) ? (double) count / totalBrowserCount : 0.0;
+            browserShare.put(browserName, share);
+        }
+
+        return browserShare; // Возвращаем долю для каждого браузера
     }
 }
