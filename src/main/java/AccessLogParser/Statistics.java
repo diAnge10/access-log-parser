@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Statistics {
     private int googlebotCount;
@@ -166,30 +167,22 @@ public class Statistics {
         return (realUsersCount > 0) ? (double) totalVisits / realUsersCount : 0.0;
     }
 
-    public Map<String, Double> getOSShare() {
-        Map<String, Double> osShare = new HashMap<>();
-        int totalOSCount = osStatistics.values().stream().mapToInt(Integer::intValue).sum();
+    public Map<String, Double> getStat(Map<String, Integer> statsMap) {
+        int total = statsMap.values().stream().mapToInt(Integer::intValue).sum();
 
-        for (Map.Entry<String, Integer> entry : osStatistics.entrySet()) {
-            String osName = entry.getKey();
-            int count = entry.getValue();
-            double share = (totalOSCount > 0) ? (double) count / totalOSCount : 0.0;
-            osShare.put(osName, share);
-        }
-        return osShare; // Возвращаем долю для каждой операционной системы
+        return statsMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> total > 0 ? entry.getValue() / (double) total : 0.0
+                ));
+    }
+
+    public Map<String, Double> getOSShare() {
+        return getStat(osStatistics);
     }
 
     public Map<String, Double> getBrowserShare() {
-        Map<String, Double> browserShare = new HashMap<>();
-        int totalBrowserCount = browserStatistics.values().stream().mapToInt(Integer::intValue).sum();
-
-        for (Map.Entry<String, Integer> entry : browserStatistics.entrySet()) {
-            String browserName = entry.getKey();
-            int count = entry.getValue();
-            double share = (totalBrowserCount > 0) ? (double) count / totalBrowserCount : 0.0;
-            browserShare.put(browserName, share);
-        }
-        return browserShare; // Возвращаем долю для каждого браузера
+        return getStat(browserStatistics);
     }
     private String getDomain(String url) {
         try {
